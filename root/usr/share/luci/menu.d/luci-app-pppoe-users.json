@@ -1,0 +1,13 @@
+{
+	"admin/services/pppoe-account": {
+		"title": "PPPoE Accounts",
+		"action": {
+			"type": "view",
+			"path": "pppoe/pppoe-users"
+		},
+		"depends": {
+			"acl": [ "luci-app-pppoe-users" ],
+			"uci": { "pppoe": true }
+		}
+	}
+}

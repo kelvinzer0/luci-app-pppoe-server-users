@@ -1,0 +1,234 @@
+#!/usr/bin/env lua
+
+local json = require "luci.jsonc"
+local nixio = require "nixio"
+local fs   = require "nixio.fs"
+local UCI = require "luci.model.uci"
+local sys  = require "luci.sys"
+local util = require "luci.util"
+
+local methods = {
+	get_users = {
+		call = function()
+			local rule = { }
+			local lines = { }
+			local line 
+			local lineno=0
+			local f = io.open("/etc/ppp/chap-secrets", "r")
+			local content = f:read("*all")
+			lines=string.split(content,"\n")
+			local ipkey, ipvalue
+			for ipkey, ipvalue in pairs(lines) do
+			
+				local  word=string.split(ipvalue," ")
+					if word[2]=='*' then
+					lineno=lineno + 1
+					rule[#rule+1] = {
+					no = lineno,
+					user= word[1],
+					host= word[2],
+					password= word[3],
+					ipaddr= word[4],
+					id=word[5]
+						}
+					end 
+						
+			end
+			f:close()
+
+	
+
+			return { accounts = rule}
+		end
+	},
+	delete_user = {
+		args = { token = "token" },
+		call = function(args)
+		local ipaddr = args.token
+			local rule = { }
+			local lines = { }
+
+		
+		local users = { }
+
+			local f = io.open("/etc/ppp/chap-secrets", "r")
+			local content = f:read("*all")
+			lines=string.split(content,"\n")
+			local ipkey, ipvalue
+			for ipkey, ipvalue in pairs(lines) do
+			
+				local  word=string.split(ipvalue," ")
+				
+				if word[5]~=ipaddr then
+					users[#users +1]=tostring(ipvalue)
+					rule[#rule+1] = {
+					no = ipkey ,
+					user= word[1],
+					host= word[2],
+					password= word[3],
+					ipaddr= word[4],
+					id=word[5]
+				}
+				end		
+			end
+			f:close()
+	local writer = io.open("/etc/ppp/chap-secrets", "w")
+	writer:write(table.concat(users,"\n"))
+	writer:close()
+			return { result = "OK" }
+		end
+	},
+	add_user = {
+		args = { user = "user",passwd = "passwd",localip = "localip " },
+		call = function(args)
+		
+		local user = args.user
+		local passwd = args.passwd
+		local localip = args.localip
+		local baseip ={}
+		baseip = string.split(localip,".")
+		local ipadd =baseip[1].. "." .. baseip[2] .. "." .. baseip[3] .. "."
+		local lastnum=0
+	
+  	
+			local rule = { }
+			local lines = { }
+			local users = { }
+
+			local f = io.open("/etc/ppp/chap-secrets", "r")
+			local content = f:read("*all")
+			lines=string.split(content,"\n")
+			local ipkey, ipvalue
+			for ipkey, ipvalue in pairs(lines) do
+			
+				local  word=string.split(ipvalue," ")
+						
+				users[#users +1]=tostring(ipvalue)
+				local n = tonumber(word[5])
+				if n~= nil then
+					if n>= lastnum then lastnum=n end
+				end
+					rule[#rule+1] = {
+					no = ipkey ,
+					user= word[1],
+					host= word[2],
+					password= word[3],
+					ipaddr= word[4],
+					id=word[5]
+									}
+						
+			end
+		
+			f:close()
+			
+	local writer = io.open("/etc/ppp/chap-secrets", "w")
+	writer:write(table.concat(users,"\n"))
+	writer:write("\n" .. user .. " * " .. passwd .. " " .. ipadd .. lastnum + 11 .. " " .. lastnum + 1 .."")
+	writer:close()
+			return { result = "OK" }
+		end
+	},
+	edit_user = {
+		args = { token = "token",user = "user",passwd = "passwd",ipadd="ipadd" },
+		call = function(args)
+		local ipaddr = args.token
+		local user = args.user
+		local passwd = args.passwd
+		local ipadd = args.ipadd
+			local rule = { }
+			local lines = { }
+		
+		local users = { }
+
+			local f = io.open("/etc/ppp/chap-secrets", "r")
+			local content = f:read("*all")
+			lines=string.split(content,"\n")
+			local ipkey, ipvalue
+			for ipkey, ipvalue in pairs(lines) do
+			
+				local  word=string.split(ipvalue," ")
+				
+			
+if word[5]~=ipaddr then
+
+users[#users +1]=tostring(ipvalue)
+					rule[#rule+1] = {
+					no = ipkey ,
+					user= "fghdfhdfg",
+					host= word[2],
+					password= "sddfhd",
+					ipaddr= word[4]
+				}
+				end
+			end
+			f:close()
+	local writer = io.open("/etc/ppp/chap-secrets", "w")
+	writer:write(table.concat(users,"\n"))
+writer:write("\n" .. user .. " * " .. passwd .. " " .. ipadd .. " " .. ipaddr )
+
+	writer:close()
+			return { result = "OK" }
+		end
+	}
+}
+
+local function parseInput()
+	local parse = json.new()
+	local done, err
+
+	while true do
+		local chunk = io.read(4096)
+		if not chunk then
+			break
+		elseif not done and not err then
+			done, err = parse:parse(chunk)
+		end
+	end
+
+	if not done then
+		print(json.stringify({ error = err or "Incomplete input" }))
+		os.exit(1)
+	end
+
+	return parse:get()
+end
+
+local function validateArgs(func, uargs)
+	local method = methods[func]
+	if not method then
+		print(json.stringify({ error = "Method not found" }))
+		os.exit(1)
+	end
+
+	if type(uargs) ~= "table" then
+		print(json.stringify({ error = "Invalid arguments" }))
+		os.exit(1)
+	end
+
+	uargs.ubus_rpc_session = nil
+
+	local k, v
+	local margs = method.args or {}
+	for k, v in pairs(uargs) do
+		if margs[k] == nil or
+		   (v ~= nil and type(v) ~= type(margs[k]))
+		then
+			print(json.stringify({ error = "Invalid arguments" }))
+			os.exit(1)
+		end
+	end
+
+	return method
+end
+
+if arg[1] == "list" then
+	local _, method, rv = nil, nil, {}
+	for _, method in pairs(methods) do rv[_] = method.args or {} end
+	print((json.stringify(rv):gsub(":%[%]", ":{}")))
+elseif arg[1] == "call" then
+	local args = parseInput()
+	local method = validateArgs(arg[2], args)
+	local result, code = method.call(args)
+	print((json.stringify(result):gsub("^%[%]$", "{}")))
+	os.exit(code or 0)
+end

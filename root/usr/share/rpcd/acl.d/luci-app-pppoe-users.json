@@ -1,0 +1,20 @@
+{
+	"luci-app-pppoe-users": {
+		"description": "Grant UCI access for luci-app-rp-pppoe-server",
+		"read": {
+			"ubus": {
+				"luci.poe": [ "get_users", "edit_user", "delete_user", "add_user"]
+				},
+
+			"uci": [ "*" ]
+		},
+		"write": {
+			"ubus": {
+				"luci.poe": ["get_users", "edit_user", "delete_user", "add_user"]
+				},
+
+			"uci": [ "*" ]
+		}
+	}
+}
+
