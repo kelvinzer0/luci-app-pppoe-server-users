@@ -2,8 +2,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PKG_NAME="luci-app-pppoe-users"
-PKG_VERSION="${PKG_VERSION:-1.0.0}"
+PKG_NAME="luci-app-pppoe-server-users"
+PKG_VERSION="${PKG_VERSION:-1.0.1}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
 BUILD_DIR="${SCRIPT_DIR}/build"
 OUTPUT_DIR="${SCRIPT_DIR}/bin"
@@ -24,11 +24,11 @@ cat << EOF > "${BUILD_DIR}/control/control"
 Package: ${PKG_NAME}
 Version: ${PKG_VERSION}-${PKG_RELEASE}
 Depends: rp-pppoe-server
-Provides: pppoeuser
+Provides: luci-app-pppoe-users, pppoeuser
 Section: luci
 Maintainer: kelvinzer0
 Architecture: all
-Description: LuCI support for PPPoE Server User Accounts management (All Architectures)
+Description: LuCI interface for managing PPPoE SERVER user accounts (/etc/ppp/chap-secrets) - All Architectures
 EOF
 
 # 3. Postinst and Prerm scripts
@@ -60,9 +60,11 @@ IPK_FILE="${OUTPUT_DIR}/${PKG_NAME}_${PKG_VERSION}-${PKG_RELEASE}_all.ipk"
 cd "${BUILD_DIR}"
 tar -czf "${IPK_FILE}" ./debian-binary ./data.tar.gz ./control.tar.gz
 
-# Also generate a compatibility alias pppoeuser_all.ipk
+# Also generate aliases for backward compatibility
+cp "${IPK_FILE}" "${OUTPUT_DIR}/luci-app-pppoe-users_${PKG_VERSION}-${PKG_RELEASE}_all.ipk"
 cp "${IPK_FILE}" "${OUTPUT_DIR}/pppoeuser_${PKG_VERSION}-${PKG_RELEASE}_all.ipk"
 
 echo "SUCCESS! Created:"
 echo "  -> ${IPK_FILE}"
+echo "  -> ${OUTPUT_DIR}/luci-app-pppoe-users_${PKG_VERSION}-${PKG_RELEASE}_all.ipk"
 echo "  -> ${OUTPUT_DIR}/pppoeuser_${PKG_VERSION}-${PKG_RELEASE}_all.ipk"

@@ -1,6 +1,6 @@
 {
 	"admin/services/pppoe-account": {
-		"title": "PPPoE Accounts",
+		"title": "PPPoE Server Accounts",
 		"action": {
 			"type": "view",
 			"path": "pppoe/pppoe-users"

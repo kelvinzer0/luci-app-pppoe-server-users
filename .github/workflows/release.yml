@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 1.0.0)'
+        description: 'Release version (e.g. 1.0.1)'
         required: false
-        default: '1.0.0'
+        default: '1.0.1'
 
 permissions:
   contents: write
@@ -32,12 +32,12 @@ jobs:
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION="1.0.0"
+            VERSION="1.0.1"
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Building version: ${VERSION}"
 
-      - name: Build IPK Packages
+      - name: Build Universal IPK Packages
         run: |
           chmod +x build.sh
           PKG_VERSION="${{ steps.vars.outputs.version }}" ./build.sh
@@ -45,7 +45,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pppoe-users-ipk
+          name: pppoe-server-users-ipk
           path: bin/*.ipk
 
       - name: Create Release
@@ -58,17 +58,23 @@ jobs:
           prerelease: false
           files: bin/*.ipk
           body: |
-            ### LuCI PPPoE Server User Accounts (Universal All-Architecture IPK)
+            ### 🚀 LuCI PPPoE Server User Accounts (Universal All-Architecture IPK)
 
-            #### Packages included:
-            - `luci-app-pppoe-users_${{ steps.vars.outputs.version }}-1_all.ipk`
-            - `pppoeuser_${{ steps.vars.outputs.version }}-1_all.ipk` (legacy compatibility name)
+            > **Important:** This package is for managing **PPPoE SERVER** user accounts (`/etc/ppp/chap-secrets`). It is designed to run on routers acting as PPPoE Access Concentrators.
 
-            #### Installation:
+            #### 📦 Packages Included:
+            - `luci-app-pppoe-server-users_${{ steps.vars.outputs.version }}-1_all.ipk` *(Primary)*
+            - `luci-app-pppoe-users_${{ steps.vars.outputs.version }}-1_all.ipk` *(Compatibility alias)*
+            - `pppoeuser_${{ steps.vars.outputs.version }}-1_all.ipk` *(Legacy alias)*
+
+            #### 💻 Supported Architectures:
+            `all` (Universal: `x86_64`, `aarch64`, `mips_24kc`, `mipsel_24kc`, `arm_cortex-a7`, etc.)
+
+            #### ⚡ Quick Installation:
             ```bash
             opkg update
             opkg install rp-pppoe-server
-            opkg install luci-app-pppoe-users_${{ steps.vars.outputs.version }}-1_all.ipk
+            opkg install luci-app-pppoe-server-users_${{ steps.vars.outputs.version }}-1_all.ipk
             /etc/init.d/rpcd restart
             /etc/init.d/uhttpd restart
             ```
